@@ -1360,17 +1360,21 @@ claim_ensures_unique_nodes_v2_test_() ->
     {timeout, 120, fun() -> ?assert(eqc:quickcheck(Prop)) end}.
 
 claim_ensures_unique_nodes_adding_groups_v2_test_() ->
-    Prop = eqc:testing_time(30, ?QC_OUT(prop_claim_ensures_unique_nodes_adding_groups(choose_claim_v2))),
+    Prop = eqc:testing_time(30, ?QC_OUT(prop_claim_ensures_unique_nodes_adding_groups())),
     {timeout, 120, fun() -> ?assert(eqc:quickcheck(Prop)) end}.
 
 claim_ensures_unique_nodes_adding_singly_v2_test_() ->
-    Prop = eqc:testing_time(30, ?QC_OUT(prop_claim_ensures_unique_nodes_adding_singly(choose_claim_v2))),
+    Prop = eqc:testing_time(30, ?QC_OUT(prop_claim_ensures_unique_nodes_adding_singly())),
     {timeout, 120, fun() -> ?assert(eqc:quickcheck(Prop)) end}.
 
 prop_claim_ensures_unique_nodes_v2() ->
     prop_claim_ensures_unique_nodes(choose_claim_v2).
 
+prop_claim_ensures_unique_nodes_adding_groups() ->
+    prop_claim_ensures_unique_nodes_adding_groups(choose_claim_v2).
 
+prop_claim_ensures_unique_nodes_adding_singly() ->
+    prop_claim_ensures_unique_nodes_adding_singly(choose_claim_v2).
 
 prop_claim_ensures_unique_nodes(ChooseFun) ->
     %% NOTE: We know that this doesn't work for the case of {_, 3}.
@@ -1393,17 +1397,8 @@ prop_claim_ensures_unique_nodes(ChooseFun) ->
 
                 Rfinal = claim(RAdded, {?MODULE, wants_claim_v2}, {?MODULE, ChooseFun}),
 
-                Preflists = riak_core_ring:all_preflists(Rfinal, Nval),
-                ImperfectPLs = orddict:to_list(
-                           lists:foldl(fun(PL,Acc) ->
-                                               PLNodes = lists:usort([N || {_,N} <- PL]),
-                                               case length(PLNodes) of
-                                                   Nval ->
-                                                       Acc;
-                                                   _ ->
-                                                       ordsets:add_element(PL, Acc)
-                                               end
-                                       end, [], Preflists)),
+                %% Preflists = riak_core_ring:all_preflists(Rfinal, Nval),
+                ImperfectPLs = imperfect_pls(Rfinal, Nval),
 
                 ?WHENFAIL(
                    begin
@@ -1450,17 +1445,7 @@ prop_claim_ensures_unique_nodes_adding_groups(ChooseFun) ->
 
                 Rfinal = claim(RAdded, {?MODULE, wants_claim_v2}, {?MODULE, ChooseFun}),
 
-                Preflists = riak_core_ring:all_preflists(Rfinal, Nval),
-                ImperfectPLs = orddict:to_list(
-                           lists:foldl(fun(PL,Acc) ->
-                                               PLNodes = lists:usort([N || {_,N} <- PL]),
-                                               case length(PLNodes) of
-                                                   Nval ->
-                                                       Acc;
-                                                   _ ->
-                                                       ordsets:add_element(PL, Acc)
-                                               end
-                                       end, [], Preflists)),
+                ImperfectPLs =imperfect_pls(Rfinal, Nval),
 
                 ?WHENFAIL(
                    begin
@@ -1503,17 +1488,8 @@ prop_claim_ensures_unique_nodes_adding_singly(ChooseFun) ->
                                              %%claim(Racc0, {?MODULE, wants_claim_v2}, {?MODULE, ChooseFun})
                                              ?MODULE:ChooseFun(Racc0, Node, Params)
                                      end, R0, RestNodes),
-                Preflists = riak_core_ring:all_preflists(Rfinal, Nval),
-                ImperfectPLs = orddict:to_list(
-                           lists:foldl(fun(PL,Acc) ->
-                                               PLNodes = lists:usort([N || {_,N} <- PL]),
-                                               case length(PLNodes) of
-                                                   Nval ->
-                                                       Acc;
-                                                   _ ->
-                                                       ordsets:add_element(PL, Acc)
-                                               end
-                                       end, [], Preflists)),
+
+                ImperfectPLs = imperfect_pls(Rfinal, Nval),
 
                 ?WHENFAIL(
                    begin
@@ -1546,6 +1522,16 @@ balanced_ring(RingSize, NodeCount, Ring) ->
     %% Collect the Nodes that are outside allowed range
     lists:filter(fun({_Node, Cnt}) -> Cnt < MinClaim orelse Cnt > TargetClaim end,
                  maps:to_list(Counters)).
+
+imperfect_pls(Rfinal, Nval) ->
+    Preflists = riak_core_ring:all_preflists(Rfinal, Nval),
+    lists:foldl(fun(PL,Acc) ->
+                        PLNodes = lists:usort([N || {_,N} <- PL]),
+                        case length(PLNodes) of
+                            Nval -> Acc;
+                            _    -> [PL| Acc]
+                        end
+                end, [], Preflists).
 
 
 wants_counts_test() ->
