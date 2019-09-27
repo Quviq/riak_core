@@ -1465,7 +1465,7 @@ prop_claim_ensures_unique_nodes(ChooseFun) ->
                                  equals({true,[]},
                                         meets_target_n(Rfinal, TNval))},
                                 {perfect_preflists, equals([], ImperfectPLs)},
-                                {balanced_ring, balanced_ring(Partitions, NodeCount, Rfinal)}]))
+                                {balanced_ring, equals([], balanced_ring(Partitions, NodeCount, Rfinal))}]))
             end).
 
 %% @TODO this fails, we didn't fix v3
@@ -1527,7 +1527,7 @@ prop_claim_ensures_unique_nodes_adding_groups(ChooseFun) ->
                                  equals({true,[]},
                                         meets_target_n(Rfinal, TNval))},
                                 {perfect_preflists, equals([], ImperfectPLs)},
-                                {balanced_ring, balanced_ring(Partitions, NodeCount, Rfinal)}]))
+                                {balanced_ring, equals([], balanced_ring(Partitions, NodeCount, Rfinal))}]))
             end).
 
 
@@ -1580,36 +1580,26 @@ prop_claim_ensures_unique_nodes_adding_singly(ChooseFun) ->
                                  equals({true,[]},
                                         meets_target_n(Rfinal, TNval))},
                                 {perfect_preflists, equals([], ImperfectPLs)},
-                                {balanced_ring, balanced_ring(Partitions, NodeCount, Rfinal)}]))
+                                {balanced_ring, equals([], balanced_ring(Partitions, NodeCount, Rfinal))}]))
             end).
 
 
 
 %% @private check that no node claims more than it should
 -spec balanced_ring(RingSize::integer(), NodeCount::integer(),
-                    riak_core_ring:riak_core_ring()) ->
-                           boolean().
+                    riak_core_ring:riak_core_ring()) -> [tuple()].
 balanced_ring(RingSize, NodeCount, Ring) ->
     TargetClaim = ceiling(RingSize / NodeCount),
     MinClaim = RingSize div NodeCount,
     AllOwners0 = riak_core_ring:all_owners(Ring),
     AllOwners = lists:keysort(2, AllOwners0),
-    {BalancedMax, AccFinal} = lists:foldl(fun({_Part, Node}, {_Balanced, [{Node, Cnt} | Acc]}) when Cnt >= TargetClaim ->
-                                             {false, [{Node, Cnt+1} | Acc]};
-                                        ({_Part, Node}, {Balanced, [{Node, Cnt} | Acc]}) ->
-                                             {Balanced, [{Node, Cnt+1} | Acc]};
-                                        ({_Part, NewNode}, {Balanced, Acc}) ->
-                                             {Balanced, [{NewNode, 1} | Acc]}
-                                     end,
-                                     {true, []},
-                                     AllOwners),
-    BalancedMin = lists:all(fun({_Node, Cnt}) -> Cnt >= MinClaim end, AccFinal),
-    case BalancedMax andalso BalancedMin of
-        true ->
-            true;
-        false ->
-            {TargetClaim, MinClaim, lists:sort(AccFinal)}
-    end.
+    Counters =
+        lists:foldl(fun({_Part, Node}, CntMap) ->
+                            maps:put(Node, maps:get(Node, CntMap, 0) + 1, CntMap)
+                    end, #{}, AllOwners),
+    %% Collect the Nodes that are outside allowed range
+    lists:filter(fun({_Node, Cnt}) -> Cnt < MinClaim orelse Cnt > TargetClaim end,
+                 maps:to_list(Counters)).
 
 
 wants_counts_test() ->
