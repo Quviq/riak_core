@@ -429,7 +429,6 @@ crash_next(S, _Value, _Args) ->
 
 %% @doc crash command
 crash() ->
-    timer:sleep(1),   %% Give any casts in flight time to arrive
     stop_pid(whereis(riak_core_bg_manager)).
 
 %% @doc crash command post condition
@@ -500,7 +499,9 @@ bypass_next(S, _Value, [Switch]) ->
 
 %% @doc bypass command
 bypass(Switch) ->
-    riak_core_bg_manager:bypass(Switch).
+    Res = riak_core_bg_manager:bypass(Switch),
+    timer:sleep(1),   %% wait for the cast to arrive.
+    Res.
 
 %% @doc bypass postcondition
 bypass_post(_S, [_Switch], Result) ->
