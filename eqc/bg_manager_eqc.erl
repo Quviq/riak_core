@@ -265,7 +265,7 @@ stop_process_next(S=#state{procs=Procs}, _Value, [Pid]) ->
     release_locks(Pid, S#state{procs = UpdatedProcs}).
 
 %% @doc postcondition for stop_process
-stop_process_post(_S, [Pid], {ok,IsAlive}) ->
+stop_process_post(_S, [_Pid], {ok,IsAlive}) ->
     %% Originally: not is_process_alive(Pid); We cannot check this in
     %% the postcondition in parallel tests, so we check it in the
     %% command instead.
