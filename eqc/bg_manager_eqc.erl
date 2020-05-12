@@ -52,7 +52,12 @@
           %% and their state
           locks  :: [{bg_eqc_type(), [{reference(), pid(), [], held | released}]}],
           %% number of tokens taken by type
-          tokens :: [{bg_eqc_type(), non_neg_integer()}]
+          tokens :: [{bg_eqc_type(), non_neg_integer()}],
+
+	  %% components used only to change weights
+
+	  %% whether or not we have changed the bypass flag (so should check it)
+	  bypass_changed :: boolean()
          }).
 
 %% @doc Returns the state in which each test case starts. (Unless a different
@@ -67,7 +72,8 @@ initial_state() ->
        limits = [],
        counts = [],
        locks  = [],
-       tokens = []
+       tokens = [],
+       bypass_changed = false
       }.
 
 %% ------ Grouped operator: set_concurrency_limit
@@ -489,17 +495,15 @@ bypass_pre(S) ->
 
 %% @doc bypass next state function
 bypass_next(S, _Value, [Switch]) ->
-    S#state{bypassed=Switch}.
+    S#state{bypassed=Switch, bypass_changed=true}.
 
 %% @doc bypass command
 bypass(Switch) ->
-    Res = riak_core_bg_manager:bypass(Switch), %% expect 'ok'
-    Value = riak_core_bg_manager:bypassed(),  %% expect eq(Value, Switch)
-    {Res, Value}.
+    riak_core_bg_manager:bypass(Switch).
 
 %% @doc bypass postcondition
 bypass_post(_S, [Switch], Result) ->
-    eq(Result, {ok, Switch}).
+    eq(Result, ok).
 
 %% ------ Grouped operator: bypassed
 %% @doc bypass arguments generator
@@ -512,7 +516,7 @@ bypassed_pre(S) ->
 
 %% @doc bypassed next state function
 bypassed_next(S, _Value, []) ->
-    S.
+    S#state{bypass_changed=false}.
 
 %% @doc bypassed command
 bypassed() ->
@@ -668,6 +672,7 @@ weight(_S, refill_tokens) -> 10;
 weight(_S, all_resources) -> 3;
 weight(_S, crash) -> 3;
 weight(_S, revive) -> 1;
+weight(#state{bypass_changed=true}, bypass) -> 20;
 weight(_S, _Cmd) -> 1.
 
 %% Other Functions
