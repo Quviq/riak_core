@@ -827,32 +827,34 @@ prop_bgmgr() ->
 
 
 prop_bgmgr_parallel() ->
+    ?FORALL(Repetitions,?SHRINK(1,[100]),
     ?FORALL(Cmds, parallel_commands(?MODULE),
             aggregate(command_names(Cmds),
-                      ?TRAPEXIT(
-                         begin
-                             stop_pid(whereis(riak_core_bg_manager)),
-                             {ok, BgMgr} = riak_core_bg_manager:start(),
-                             {Seq, Par, Res} = run_parallel_commands(?MODULE,Cmds),
-                             InfoTable = ets:tab2list(?BG_INFO_ETS_TABLE),
-                             EntryTable = ets:tab2list(?BG_ENTRY_ETS_TABLE),
-                             Monitors = bg_manager_monitors(),
-                             stop_pid(BgMgr),
-                             ?WHENFAIL(
-                                begin
-                                    io:format("~n~nbackground_mgr tables: ~n"),
-                                    io:format("---------------~n"),
-                                    io:format("~p~n", [InfoTable]),
-                                    io:format("---------------~n"),
-                                    io:format("~p~n", [EntryTable]),
-                                    io:format("---------------~n"),
-                                    io:format("~n~nbg_manager monitors: ~n"),
-                                    io:format("---------------~n"),
-                                    io:format("~p~n", [Monitors]),
-                                    io:format("---------------~n")
-                                end,
-                                pretty_commands(?MODULE, Cmds, {Seq, Par, Res},
-                                                Res == ok))
-                         end))).
+                      ?ALWAYS(Repetitions,
+			?TRAPEXIT(
+                           begin
+			       stop_pid(whereis(riak_core_bg_manager)),
+			       {ok, BgMgr} = riak_core_bg_manager:start(),
+			       {Seq, Par, Res} = run_parallel_commands(?MODULE,Cmds),
+			       InfoTable = ets:tab2list(?BG_INFO_ETS_TABLE),
+			       EntryTable = ets:tab2list(?BG_ENTRY_ETS_TABLE),
+			       Monitors = bg_manager_monitors(),
+			       stop_pid(BgMgr),
+			       ?WHENFAIL(
+				  begin
+				      io:format("~n~nbackground_mgr tables: ~n"),
+				      io:format("---------------~n"),
+				      io:format("~p~n", [InfoTable]),
+				      io:format("---------------~n"),
+				      io:format("~p~n", [EntryTable]),
+				      io:format("---------------~n"),
+				      io:format("~n~nbg_manager monitors: ~n"),
+				      io:format("---------------~n"),
+				      io:format("~p~n", [Monitors]),
+				      io:format("---------------~n")
+				  end,
+				  pretty_commands(?MODULE, Cmds, {Seq, Par, Res},
+						  Res == ok))
+			   end))))).
 
 -endif.
