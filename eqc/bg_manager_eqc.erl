@@ -229,10 +229,6 @@ start_process() ->
 start_process_next(S=#state{procs=Procs}, Value, []) ->
     S#state{ procs = lists:keystore(Value, 1, Procs, {Value, running}) }.
 
-%% @doc postcondition for start_process
-start_process_post(_S, [], Pid)->
-    is_process_alive(Pid).
-
 %% ------ Grouped operator: stop_process
 %% @doc stop_process_command - Argument generator
 stop_process_args(S) ->
@@ -259,7 +255,7 @@ stop_process(Pid) ->
     %% not be bullet proof. The catch handles the case where the bg manager
     %% has been crashed by the test.
     catch riak_core_bg_manager:enabled(),
-    Res.
+    {Res,is_process_alive(Pid)}.
 
 %% @doc state transition for stop_process command
 stop_process_next(S=#state{procs=Procs}, _Value, [Pid]) ->
@@ -267,11 +263,13 @@ stop_process_next(S=#state{procs=Procs}, _Value, [Pid]) ->
     UpdatedProcs = lists:keystore(Pid, 1, Procs, {Pid, not_running}),
     release_locks(Pid, S#state{procs = UpdatedProcs}).
 
-
 %% @doc postcondition for stop_process
-stop_process_post(_S, [Pid], ok) ->
-    not is_process_alive(Pid);
-stop_process_post(_S, [Pid], {error, didnotexit}) ->
+stop_process_post(_S, [Pid], {ok,IsAlive}) ->
+    %% Originally: not is_process_alive(Pid); We cannot check this in
+    %% the postcondition in parallel tests, so we check it in the
+    %% command instead.
+    not IsAlive;
+stop_process_post(_S, [Pid], {{error, didnotexit},_}) ->
     {error, {didnotexit, Pid}}.
 
 %% ------ Grouped operator: set_token_rate
