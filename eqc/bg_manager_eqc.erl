@@ -429,6 +429,7 @@ crash_next(S, _Value, _Args) ->
 
 %% @doc crash command
 crash() ->
+    timer:sleep(1),   %% Give any casts in flight time to arrive
     stop_pid(whereis(riak_core_bg_manager)).
 
 %% @doc crash command post condition
