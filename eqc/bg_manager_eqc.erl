@@ -148,10 +148,11 @@ get_lock_pre(S) ->
     RunningProcs andalso is_alive(S).
 
 %% @doc Precondition for generation of get_lock command
-get_lock_pre(S, [Type, _Pid, _Meta]) ->
+get_lock_pre(S, [Type, Pid, _Meta]) ->
     %% must call set_concurrency_limit at least once
     %% TODO: we can probably remove and test this restriction instead
-    is_integer(limit(Type, unregistered, S)).
+    is_integer(limit(Type, unregistered, S)) andalso 
+	lists:member(Pid, running_procs(S)).
 
 get_lock(Type, Pid, Meta) ->
     case riak_core_bg_manager:get_lock(Type, Pid, Meta) of
