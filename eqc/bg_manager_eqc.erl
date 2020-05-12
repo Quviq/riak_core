@@ -502,7 +502,7 @@ bypass(Switch) ->
     riak_core_bg_manager:bypass(Switch).
 
 %% @doc bypass postcondition
-bypass_post(_S, [Switch], Result) ->
+bypass_post(_S, [_Switch], Result) ->
     eq(Result, ok).
 
 %% ------ Grouped operator: bypassed
