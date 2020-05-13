@@ -563,7 +563,7 @@ enable_pre(S) ->
     is_alive(S).
 
 %% per resource enable
-enable_pre(S,[]) ->
+enable_pre(_S,[]) ->
     true;
 enable_pre(S,[Type]) ->
     is_integer(max_num_tokens(Type, unregistered, S)) andalso is_alive(S).
