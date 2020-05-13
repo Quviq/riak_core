@@ -699,19 +699,21 @@ all_resources_() ->
     choose(0, 10).
 
 %% @doc weight/2 - Distribution of calls
+weight(#state{limits=[]}, set_concurrency_limit) -> 20;
 weight(_S, set_concurrency_limit) -> 3;
 weight(_S, concurrency_limit) -> 3;
 weight(_S, concurrency_limit_reached) -> 3;
-weight(_S, start_process) -> 3;
-weight(#state{alive=true}, stop_process) -> 3;
-weight(#state{alive=false}, stop_process) -> 3;
+weight(_S, start_process) -> 6;
+weight(#state{alive=true}, stop_process) -> 2;
+weight(#state{alive=false}, stop_process) -> 2;
 weight(_S, get_lock) -> 20;
+weight(#state{counts=[]}, set_token_rate) -> 20;
 weight(_S, set_token_rate) -> 3;
-weight(_S, token_rate) -> 0;
+weight(_S, token_rate) -> 1;
 weight(_S, get_token) -> 20;
 weight(_S, refill_tokens) -> 10;
 weight(_S, all_resources) -> 3;
-weight(_S, crash) -> 3;
+weight(_S, crash) -> 2;
 weight(_S, revive) -> 1;
 weight(#state{bypass_changed=true}, bypass) -> 20;
 weight(_S, _Cmd) -> 1.
