@@ -834,7 +834,7 @@ bg_manager_monitors(Pid) ->
 
 prop_bgmgr() ->
     ?FORALL(Cmds, commands(?MODULE),
-            aggregate(command_names(Cmds),
+            aggregate(with_title("Commands"),command_names(Cmds),
                       ?TRAPEXIT(
                          begin
                              stop_pid(whereis(riak_core_bg_manager)),
