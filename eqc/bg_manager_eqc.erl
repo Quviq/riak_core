@@ -552,8 +552,10 @@ bypassed_features(_,_,R) ->
 
 %% ------ Grouped operator: enable
 %% @doc bypass arguments generator
-enable_args(_S) ->
-    [oneof([[], token_type(), lock_type()])].
+enable_args(S) ->
+    oneof([[], 
+	   [probably_registered_token_type(S)], 
+	   [probably_registered_lock_type(S)]]).
 
 %% @doc enable precondition
 %% global enable
@@ -561,6 +563,8 @@ enable_pre(S) ->
     is_alive(S).
 
 %% per resource enable
+enable_pre(S,[]) ->
+    true;
 enable_pre(S,[Type]) ->
     is_integer(max_num_tokens(Type, unregistered, S)) andalso is_alive(S).
 
@@ -590,8 +594,10 @@ enable_post(S, [_Resource], Result) ->
 
 %% ------ Grouped operator: disable
 %% @doc bypass arguments generator
-disable_args(_S) ->
-    [oneof([[], token_type(), lock_type()])].
+disable_args(S) ->
+    oneof([[], 
+	   [probably_registered_token_type(S)], 
+	   [probably_registered_lock_type(S)]]).
 
 %% @doc eanble precondition
 %% global disable
@@ -599,6 +605,8 @@ disable_pre(S) ->
     is_alive(S).
 
 %% per resource disable
+disable_pre(_S,[]) ->
+    true;
 disable_pre(S,[Type]) ->
     is_integer(max_num_tokens(Type, unregistered, S)) andalso is_alive(S).
 
