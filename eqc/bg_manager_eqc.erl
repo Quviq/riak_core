@@ -139,6 +139,10 @@ concurrency_limit_reached_post(S, [Type], Res) ->
     ExistingCount = length(held_locks(Type, S)),
     eq(ExistingCount >= Limit, Res).
 
+%% @doc concurrency_limit_reached_features
+concurrency_limit_reached_features(_S, [_Type], Res) ->
+    [case Res of {unregistered,_} -> unregistered; _ -> Res end].
+
 
 %% ------ Grouped operator: get_lock
 %% @doc argument generator for get_lock command
@@ -212,6 +216,9 @@ get_lock_post(S=#state{bypassed=Bypassed, enabled=Enabled}, [Type, _Pid, _Meta],
             {ExistingCount, 'not <', Limit}
     end.
 
+get_lock_features(_S, [_Type,_Pid,_], R) ->
+    [case R of max_concurrency -> R; _ -> reference end].
+
 %% ------ Grouped operator: start_process
 %% @doc args generator for start_process
 start_process_args(_S) ->
@@ -235,6 +242,9 @@ start_process() ->
 %% @doc state transition for start_process command
 start_process_next(S=#state{procs=Procs}, Value, []) ->
     S#state{ procs = lists:keystore(Value, 1, Procs, {Value, running}) }.
+
+start_process_features(S,[],_) ->
+    [length(running_procs(S))].
 
 %% ------ Grouped operator: stop_process
 %% @doc stop_process_command - Argument generator
@@ -278,6 +288,9 @@ stop_process_post(_S, [_Pid], {ok,IsAlive}) ->
     not IsAlive;
 stop_process_post(_S, [Pid], {{error, didnotexit},_}) ->
     {error, {didnotexit, Pid}}.
+
+stop_process_features(S, [Pid], _) ->
+    [length(locks_held_by(Pid,S))].
 
 %% ------ Grouped operator: set_token_rate
 %% @doc set_token_rate arguments generator
@@ -394,6 +407,9 @@ get_token_post(S=#state{bypassed=Bypassed, enabled=Enabled}, [Type], ok) ->
             {CurCount, 'not <', Max}
     end.
 
+get_token_features(_S, Args, R) ->
+    [{length(Args),R}].
+
 %% ------ Grouped operator: refill_tokens
 %% @doc refill_tokens args generator
 refill_tokens_args(_S) ->
@@ -483,6 +499,9 @@ all_resources_post(State, [Resource], Result) ->
     NumTokens = num_tokens_taken(Resource, State),
     %% TODO: could validate record entries in addition to correct counts
     eq(length(Result), NumLocks+NumTokens).
+
+all_resources_features(_S, _, R) ->
+    [length(R)].
 
 %% ------ Grouped operator: bypass
 %% @doc bypass arguments generator
@@ -626,6 +645,9 @@ enabled() ->
 enabled_post(S, _Value, Result) ->
     eq(Result, status_of(true, S)).
 
+enabled_features(_, _, R) ->
+    [R].
+
 %%------------ helpers -------------------------
 %% @doc resources are disabled iff they appear on the "disabled" list
 resource_enabled(Resource, #state{disabled=Disabled}) ->
@@ -755,6 +777,9 @@ mark_locks_released(Pid, Locks) ->
     WithoutPid = [Lock || Lock <- Locks, element(2, Lock) =/= Pid],
     MarkedReleased = [{Ref, LockPid, Meta, released} || {Ref, LockPid, Meta, _}  <- Locks, LockPid =:= Pid],
     MarkedReleased ++ WithoutPid.
+
+locks_held_by(Pid, State) ->
+    [{Ref, Pid, Meta, held} || {Ref, Pid1, Meta, held} <- all_locks(State), Pid==Pid1].
 
 increment_token_count(Type, State=#state{tokens=Tokens}) ->
     CurCount = num_tokens(Type, State),
