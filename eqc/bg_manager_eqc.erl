@@ -120,8 +120,8 @@ concurrency_limit_post(S, [Type], Limit) ->
 
 %% ------ Grouped operator: concurrency_limit_reached
 %% @doc concurrency_limit_reached command argument generator
-concurrency_limit_reached_args(_S) ->
-    [lock_type()].
+concurrency_limit_reached_args(S) ->
+    [probably_registered_lock_type(S)].
 
 %% @doc concurrency_limit_reached precondition
 concurrency_limit_reached_pre(S) ->
@@ -149,7 +149,7 @@ concurrency_limit_reached_features(_S, [_Type], Res) ->
 get_lock_args(S) ->
     %% TODO: test getting locks on behalf of calling process instead of other process
     %% TODO: test trying to get lock on behalf of killed process?
-    [lock_type(), oneof(running_procs(S)), []].
+    [probably_registered_lock_type(S), oneof(running_procs(S)), []].
 
 %% @doc Precondition for generation of get_lock command
 get_lock_pre(S) ->
@@ -344,8 +344,8 @@ token_rate_post(S, [Type], Res) ->
 %% @doc get_token args generator
 get_token_args(S) ->
     %% TODO: generate meta for future query tests
-    ArityTwo = [[token_type(), oneof(running_procs(S))] || length(running_procs(S)) > 0],
-    ArityOne = [[token_type()]],
+    ArityTwo = [[probably_registered_token_type(S), oneof(running_procs(S))] || length(running_procs(S)) > 0],
+    ArityOne = [[probably_registered_token_type(S)]],
     oneof(ArityTwo ++ ArityOne).
 
 %% @doc Precondition for get_token
@@ -672,8 +672,14 @@ status_of(_E,_S) -> disabled.
 lock_type() ->
     oneof([a,b,c,d]). %%,e,f,g,h,i]).
 
+probably_registered_lock_type(#state{limits=Limits}) ->
+    oneof([Type || {Type,_} <- Limits] ++ [lock_type()]).
+
 token_type() ->
     oneof(['A','B','C','D']). %%,'E','F','G','H','I']).
+
+probably_registered_token_type(#state{counts=Counts}) ->
+    oneof([Type || {Type,_} <- Counts] ++ [token_type()]).
 
 lock_limit() ->
     choose(0, 5).
