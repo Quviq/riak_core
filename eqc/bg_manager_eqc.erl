@@ -834,8 +834,9 @@ prop_bgmgr() ->
 
 
 prop_bgmgr_parallel() ->
-    ?FORALL(Repetitions,?SHRINK(1,[100]),
+    ?FORALL(Repetitions,?SHRINK(1,[1000]),
     ?FORALL(Cmds, parallel_commands(?MODULE),
+    ?IMPLIES(atomic(Cmds),
             aggregate(command_names(Cmds),
                       ?ALWAYS(Repetitions,
 			?TRAPEXIT(
@@ -862,6 +863,20 @@ prop_bgmgr_parallel() ->
 				  end,
 				  pretty_commands(?MODULE, Cmds, {Seq, Par, Res},
 						  Res == ok))
-			   end))))).
+			   end)))))).
+
+%% Some commands do not behave atomically. We need to exclude these
+%% from the parallel parts of a test case.
+
+atomic({Seq,Par}) ->
+    length(Par) =< 1 orelse lists:all(fun atomic/1,Par);
+atomic(Cmds) when is_list(Cmds) ->
+    lists:all(fun atomic/1,Cmds);
+atomic({set,_,{call,_,Fun,_}}) ->
+    atomic(Fun);
+atomic(all_resources) ->
+    false;
+atomic(Fun) when is_atom(Fun) ->
+    true.
 
 -endif.
