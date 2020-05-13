@@ -834,48 +834,47 @@ bg_manager_monitors(Pid) ->
 
 prop_bgmgr() ->
     ?FORALL(Cmds, commands(?MODULE),
-            aggregate(with_title("Commands"),command_names(Cmds),
-                      ?TRAPEXIT(
-                         begin
-                             stop_pid(whereis(riak_core_bg_manager)),
-                             {ok, _BgMgr} = riak_core_bg_manager:start(),
-                             {H, S, Res} = run_commands(?MODULE,Cmds),
-                             InfoTable = ets:tab2list(?BG_INFO_ETS_TABLE),
-                             EntryTable = ets:tab2list(?BG_ENTRY_ETS_TABLE),
-                             Monitors = bg_manager_monitors(),
-                             RunnngPids = running_procs(S),
-                             %% cleanup processes not killed during test
-                             [stop_pid(Pid) || Pid <- RunnngPids],
-                             stop_pid(whereis(riak_core_bg_manager)),
-                             ?WHENFAIL(
-                                begin
-                                    io:format("~n~nFinal State: ~n"),
-                                    io:format("---------------~n"),
-                                    io:format("alive = ~p~n", [S#state.alive]),
-                                    io:format("bypassed = ~p~n", [S#state.bypassed]),
-                                    io:format("enabled = ~p~n", [S#state.enabled]),
-                                    io:format("procs = ~p~n", [S#state.procs]),
-                                    io:format("limits = ~p~n", [S#state.limits]),
-                                    io:format("locks = ~p~n", [S#state.locks]),
-                                    io:format("counts = ~p~n", [S#state.counts]),
-                                    io:format("tokens = ~p~n", [S#state.tokens]),
-                                    io:format("---------------~n"),
-                                    io:format("~n~nbackground_mgr tables: ~n"),
-                                    io:format("---------------~n"),
-                                    io:format("~p~n", [InfoTable]),
-                                    io:format("---------------~n"),
-                                    io:format("~p~n", [EntryTable]),
-                                    io:format("---------------~n"),
-                                    io:format("~n~nbg_manager monitors: ~n"),
-                                    io:format("---------------~n"),
-                                    io:format("~p~n", [Monitors]),
-                                    io:format("---------------~n")
-
-                                end,
-				aggregate_features(H,
-                                pretty_commands(?MODULE, Cmds, {H, S, Res},
-					    Res == ok)))
-                         end))).
+	    ?TRAPEXIT(
+	       begin
+		   stop_pid(whereis(riak_core_bg_manager)),
+		   {ok, _BgMgr} = riak_core_bg_manager:start(),
+		   {H, S, Res} = run_commands(?MODULE,Cmds),
+		   InfoTable = ets:tab2list(?BG_INFO_ETS_TABLE),
+		   EntryTable = ets:tab2list(?BG_ENTRY_ETS_TABLE),
+		   Monitors = bg_manager_monitors(),
+		   RunnngPids = running_procs(S),
+		   %% cleanup processes not killed during test
+		   [stop_pid(Pid) || Pid <- RunnngPids],
+		   stop_pid(whereis(riak_core_bg_manager)),
+		   ?WHENFAIL(
+		      begin
+			  io:format("~n~nFinal State: ~n"),
+			  io:format("---------------~n"),
+			  io:format("alive = ~p~n", [S#state.alive]),
+			  io:format("bypassed = ~p~n", [S#state.bypassed]),
+			  io:format("enabled = ~p~n", [S#state.enabled]),
+			  io:format("procs = ~p~n", [S#state.procs]),
+			  io:format("limits = ~p~n", [S#state.limits]),
+			  io:format("locks = ~p~n", [S#state.locks]),
+			  io:format("counts = ~p~n", [S#state.counts]),
+			  io:format("tokens = ~p~n", [S#state.tokens]),
+			  io:format("---------------~n"),
+			  io:format("~n~nbackground_mgr tables: ~n"),
+			  io:format("---------------~n"),
+			  io:format("~p~n", [InfoTable]),
+			  io:format("---------------~n"),
+			  io:format("~p~n", [EntryTable]),
+			  io:format("---------------~n"),
+			  io:format("~n~nbg_manager monitors: ~n"),
+			  io:format("---------------~n"),
+			  io:format("~p~n", [Monitors]),
+			  io:format("---------------~n")
+		      end,
+		      check_commands(?MODULE, Cmds, {H, S, Res},
+			aggregate_features(H,
+			  pretty_commands(?MODULE, Cmds, {H, S, Res},
+					  Res == ok))))
+                         end)).
 
 
 prop_bgmgr_parallel() ->
