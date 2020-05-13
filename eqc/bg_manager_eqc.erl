@@ -868,7 +868,7 @@ prop_bgmgr_parallel() ->
 %% Some commands do not behave atomically. We need to exclude these
 %% from the parallel parts of a test case.
 
-atomic({Seq,Par}) ->
+atomic({_Seq,Par}) ->
     length(Par) =< 1 orelse lists:all(fun atomic/1,Par);
 atomic(Cmds) when is_list(Cmds) ->
     lists:all(fun atomic/1,Cmds);
