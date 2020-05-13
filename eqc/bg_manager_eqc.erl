@@ -853,8 +853,9 @@ prop_bgmgr() ->
                                     io:format("---------------~n")
 
                                 end,
+				aggregate_features(H,
                                 pretty_commands(?MODULE, Cmds, {H, S, Res},
-                                                Res == ok))
+					    Res == ok)))
                          end))).
 
 
@@ -903,5 +904,36 @@ atomic(all_resources) ->
     false;
 atomic(Fun) when is_atom(Fun) ->
     true.
+
+%% This code is dependent on QuickCheck internals, and should not really be here.
+aggregate_features(H,P) ->
+    aggregate_by_function(
+      functions_with_features(),
+      group(lists:sort([{Fun,F} || {_,_,_,{set,_,{call,_,Fun,_}},Fs,_} <- H, 
+				   F <- if is_list(Fs)->Fs; true->[Fs] end])),
+      P).
+
+aggregate_by_function([],[],P) ->
+    P;
+aggregate_by_function([Fun|Funs],[{Fun,Fs}|More],P) ->
+    aggregate(with_title(atom_to_list(Fun)++" features"),Fs,
+	      features([{Fun,F} || F <- Fs],
+		       aggregate_by_function(Funs,More,P)));
+aggregate_by_function([Fun|Funs],More,P) ->
+    aggregate(with_title(atom_to_list(Fun)++" features"),[],
+	      aggregate_by_function(Funs,More,P)).
+
+group([{A,B}|C]) -> group(A,[B],C);
+group([]) -> [].
+
+group(A,Bs,[{A,B}|C]) -> group(A,[B|Bs],C);
+group(A,Bs,C) -> [{A,lists:reverse(Bs)}|group(C)].
+
+functions_with_features() ->
+    lists:usort(
+      [list_to_atom(lists:reverse(Eman))
+       || {Fun,3} <- ?MODULE:module_info(exports),
+	  Fun /= call_features,
+	  "serutaef_" ++ Eman <- [lists:reverse(atom_to_list(Fun))]]).
 
 -endif.
