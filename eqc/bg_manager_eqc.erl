@@ -547,6 +547,9 @@ bypassed() ->
 bypassed_post(#state{bypassed=Bypassed}, _Value, Result) ->
     eq(Result, Bypassed).
 
+bypassed_features(_,_,R) ->
+    [R].
+
 %% ------ Grouped operator: enable
 %% @doc bypass arguments generator
 enable_args(_S) ->
